@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechSentry API Test</title>
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #0A0C10;
+            color: #E8EDF2;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(15, 17, 23, 0.8);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tech-primary { color: #00D4FF; }
+        .tech-secondary { color: #FF6B35; }
+        .tech-success { color: #00FF94; }
+        button {
+            background: #00D4FF;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #00B8E6; }
+        .loading { color: #FF6B35; }
+        .error { color: #FF6B35; }
+        .success { color: #00FF94; }
+        pre { 
+            background: #0F1117; 
+            padding: 10px; 
+            border-radius: 4px; 
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1 class="tech-primary">🛡️ TechSentry API Test</h1>
+        <p>Test the technology intelligence API endpoints</p>
+    </div>
+
+    <div class="card">
+        <h2>Technology Profile Test</h2>
+        <input type="text" id="techQuery" placeholder="Enter technology (e.g., Quantum Computing)" style="width: 300px; padding: 8px; margin-right: 10px; background: #0F1117; border: 1px solid #1A2035; color: #E8EDF2; border-radius: 4px;">
+        <button onclick="testTechnologyProfile()">Test Technology Profile</button>
+        <div id="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>Search Test</h2>
+        <input type="text" id="searchQuery" placeholder="Search for papers..." style="width: 300px; padding: 8px; margin-right: 10px; background: #0F1117; border: 1px solid #1A2035; color: #E8EDF2; border-radius: 4px;">
+        <button onclick="testSearch()">Test Search</button>
+        <div id="searchResult"></div>
+    </div>
+
+    <script>
+        async function testTechnologyProfile() {
+            const query = document.getElementById('techQuery').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!query) {
+                resultDiv.innerHTML = '<p class="error">Please enter a technology name</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="loading">Testing API...</p>';
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/technology/profile/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3 class="success">✅ API Response Successful</h3>
+                        <div class="card">
+                            <h4>Technology: ${data.technology || query}</h4>
+                            <p><strong>Stats:</strong></p>
+                            <ul>
+                                <li>Papers: ${data.stats?.papers || 0}</li>
+                                <li>Patents: ${data.stats?.patents || 0}</li>
+                                <li>Companies: ${data.stats?.companies || 0}</li>
+                                <li>News: ${data.stats?.news || 0}</li>
+                                <li>TRL Level: ${data.stats?.trl_level || 'N/A'}</li>
+                            </ul>
+                            <p><strong>Sample Papers:</strong></p>
+                            <div style="max-height: 200px; overflow-y: auto;">
+                                ${data.papers?.slice(0, 3).map(paper => `
+                                    <div style="border-left: 2px solid #00D4FF; padding-left: 10px; margin-bottom: 10px;">
+                                        <strong>${paper.title}</strong><br>
+                                        <small>${paper.publication_year} • ${paper.cited_by_count || 0} citations</small>
+                                    </div>
+                                `).join('') || '<p>No papers found</p>'}
+                            </div>
+                        </div>
+                        <details>
+                            <summary>Full Response (JSON)</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ API Error: ${response.status}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Network Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            const resultDiv = document.getElementById('searchResult');
+            
+            if (!query) {
+                resultDiv.innerHTML = '<p class="error">Please enter a search query</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="loading">Searching...</p>';
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/search/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const totalResults = Object.values(data).flat().length;
+                    resultDiv.innerHTML = `
+                        <h3 class="success">✅ Search Successful</h3>
+                        <p><strong>Total Results:</strong> ${totalResults}</p>
+                        <div class="card">
+                            <h4>Results by Type:</h4>
+                            <ul>
+                                <li>Papers: ${data.papers?.length || 0}</li>
+                                <li>Patents: ${data.patents?.length || 0}</li>
+                                <li>News: ${data.news?.length || 0}</li>
+                                <li>Companies: ${data.companies?.length || 0}</li>
+                            </ul>
+                            ${data.papers?.length > 0 ? `
+                                <h5>Sample Papers:</h5>
+                                ${data.papers.slice(0, 2).map(paper => `
+                                    <div style="border-left: 2px solid #00D4FF; padding-left: 10px; margin-bottom: 10px;">
+                                        <strong>${paper.title}</strong><br>
+                                        <small>${paper.publication_year} • ${paper.cited_by_count || 0} citations</small>
+                                    </div>
+                                `).join('')}
+                            ` : ''}
+                        </div>
+                        <details>
+                            <summary>Full Response (JSON)</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Search Error: ${response.status}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Network Error: ${error.message}</p>`;
+            }
+        }
+
+        // Test on page load
+        window.onload = function() {
+            document.getElementById('techQuery').value = 'Quantum Computing';
+            document.getElementById('searchQuery').value = 'artificial intelligence';
+        };
+    </script>
+</body>
+</html>
